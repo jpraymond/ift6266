@@ -59,7 +59,7 @@
     extensions: [
         !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
             channel_name: 'valid_objective',
-            save_path: '/data/lisa/exp/raymonjp/speech_synthesis/mlp150.pkl'
+            save_path: '/data/lisa/exp/raymonjp/speech_synthesis/mlp50.pkl'
         },
         !obj:pylearn2.training_algorithms.sgd.MonitorBasedLRAdjuster {
             dataset_name: 'valid'
