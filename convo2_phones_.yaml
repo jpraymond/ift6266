@@ -1,0 +1,102 @@
+!obj:pylearn2.train.Train {
+    dataset: &train !obj:research.code.pylearn2.datasets.timit.TIMIT {
+        which_set: 'train',
+        frame_length: &fl 1,
+        frames_per_example: &fpe 100
+    },
+    model: !obj:mlp_with_source.MLPWithSource {
+        input_space: !obj:pylearn2.space.CompositeSpace {
+            components: [
+                !obj:pylearn2.space.Conv2DSpace {
+                    shape: [1, *fpe],
+                    num_channels: 1
+                },
+                !obj:pylearn2.space.VectorSpace {
+                    dim: 62
+                }
+            ]
+        },
+        input_source: ['features', 'phones'],
+        layers: [
+            !obj:mlp_with_source.CompositeLayerWithSource {
+                layer_name: 'h1',
+                layers: [
+                    !obj:pylearn2.models.mlp.ConvRectifiedLinear {
+                        layer_name: 'h1_1',
+                        output_channels: 13,
+                        kernel_shape: [1, 7],
+                        pool_shape: [1, 2],
+                        pool_stride: [1, 2],
+                        pool_type: 'max',
+                        max_kernel_norm: 1.9365,
+                        irange: 0.05
+                    },
+                    !obj:pylearn2.models.mlp.RectifiedLinear {
+                        layer_name: 'h1_2',
+                        dim: 100,
+                        irange: 0.05
+                    }
+                ]
+            },
+            !obj:pylearn2.models.mlp.RectifiedLinear {
+                layer_name: 'h2',
+                dim: 300,
+                irange: 0.05
+            },
+            !obj:pylearn2.models.mlp.RectifiedLinear {
+                layer_name: 'h3',
+                dim: 200,
+                irange: 0.05
+            },
+            !obj:pylearn2.models.mlp.Linear {
+                layer_name: 'h4',
+                dim: 1,
+                irange: 0.05
+            }
+        ]
+    },
+    algorithm: !obj:pylearn2.training_algorithms.sgd.SGD {
+        batch_size: 2048,
+        learning_rate: 0.25,
+        monitoring_dataset: {
+            'train': *train,
+            'valid': !obj:research.code.pylearn2.datasets.timit.TIMIT {
+                which_set: 'valid',
+                frame_length: *fl,
+                frames_per_example: *fpe
+            },
+            'test': !obj:research.code.pylearn2.datasets.timit.TIMIT {
+                which_set: 'test',
+                frame_length: *fl,
+                frames_per_example: *fpe
+            }
+        },
+        cost: !obj:pylearn2.costs.cost.SumOfCosts {
+            costs: [
+                !obj:pylearn2.costs.mlp.Default {},
+                !obj:pylearn2.costs.mlp.WeightDecay {
+                    coeffs: [0.0, 0.0, 0.0, 0.0]
+                }
+            ]
+        
+        },
+        termination_criterion: !obj:pylearn2.termination_criteria.MonitorBased {
+            channel_name: 'valid_objective',
+            prop_decrease: 0.005,
+            N: 10
+        },
+        train_iteration_mode: 'random_uniform',
+        monitor_iteration_mode: 'random_uniform',
+        batches_per_iter: 5000,
+        monitoring_batches: 7500
+    },
+    extensions: [
+        !obj:pylearn2.train_extensions.best_params.MonitorBasedSaveBest {
+            channel_name: 'valid_objective',
+            save_path: '/data/lisa/exp/raymonjp/speech_synthesis/convo_phones13_300-200_25_kernel7_.pkl'
+        },
+        !obj:pylearn2.training_algorithms.sgd.MonitorBasedLRAdjuster {
+            dataset_name: 'valid'
+        }
+    ]
+}
